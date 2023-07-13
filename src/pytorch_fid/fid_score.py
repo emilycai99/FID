@@ -93,16 +93,20 @@ class ImagePathDataset(torch.utils.data.Dataset):
         return img
 
 class NPZDataset(torch.utils.data.Dataset):
-    def __init__(self, data_npz):
-        self.data = torch.from_numpy(data_npz).to(torch.float)
-        self.data = self.data.permute(0,3,1,2)
+    def __init__(self, data_npz, transforms=None):
+        self.transforms = transforms
+        self.data = data_npz
         print(self.data.shape)
     
     def __len__(self):
         return self.data.shape[0]
     
     def __getitem__(self, i):
-        return self.data[i]
+        img = self.data[i]
+        if self.transforms is not None:
+            img = self.transforms(img)
+
+        return img
     
 def get_activations(files, model, batch_size=50, dims=2048, device='cpu',
                     num_workers=1, npz_data=False):
@@ -133,7 +137,7 @@ def get_activations(files, model, batch_size=50, dims=2048, device='cpu',
                 'Setting batch size to data size'))
             batch_size = files.shape[0]
         
-        dataset = NPZDataset(files)
+        dataset = NPZDataset(files, transforms=TF.ToTensor())
     else:
         if batch_size > len(files):
             print(('Warning: batch size is bigger than the data size. '
@@ -168,6 +172,7 @@ def get_activations(files, model, batch_size=50, dims=2048, device='cpu',
         pred_arr[start_idx:start_idx + pred.shape[0]] = pred
 
         start_idx = start_idx + pred.shape[0]
+    print(batch.shape)
 
     return pred_arr
 
